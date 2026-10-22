@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <title>Project Report Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; }
+    h2 { color: #333; }
+    .filters { background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    select, button { padding: 8px 12px; margin-right: 10px; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background-color: #007bff; color: white; }
+  </style>
+</head>
+<body>
+
+  <h2>Project Target vs Achievement Dashboard</h2>
+
+  <div class="filters">
+    <label><b>Report Type:</b></label>
+    <select id="reportType">
+      <option value="1">1) District wise & Quarter wise (Q1, Q2, Q3, Q4)</option>
+      <option value="2">2) District wise & Half Yearly wise (HY1, HY2)</option>
+      <option value="3">3) District wise & Yearly wise</option>
+      <option value="4">4) District wise & Business Activity wise</option>
+      <option value="5">5) District wise & Vertical wise</option>
+      <option value="6">6) Vertical & Business Activity wise (Q1-Q4, HY1-HY2, Annual)</option>
+    </select>
+
+    <label><b>District:</b></label>
+    <select id="districtFilter"><option value="ALL">All Districts</option></select>
+
+    <label><b>Vertical:</b></label>
+    <select id="verticalFilter"><option value="ALL">All Verticals</option></select>
+
+    <button onclick="applyFilter()">Generate Report</button>
+  </div>
+
+  <div id="reportContainer">
+    <table id="reportTable">
+      <thead><tr id="tableHeader"></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    // Apne Apps Script Web App URL ko yahan badlein
+    const API_URL = "https://script.google.com/macros/s/AKfycbxGjFkZYlIyQTxrvDFKZMjYtKgD3-Sc7saEGiatJ83HfuNE-DTtYy6RlRLiCGp0WMyx5Q/exec";
+    let rawData = [];
+
+    async function fetchData() {
+      try {
+        let res = await fetch(API_URL);
+        rawData = await res.json();
+        populateDropdowns();
+        applyFilter();
+      } catch (err) {
+        console.error("Data fetch karne me problem hui:", err);
+      }
+    }
+
+    function populateDropdowns() {
+      // Dropdowns ko Google Sheet data ke hisab se dynamically bharne ka logic
+    }
+
+    function applyFilter() {
+      const reportType = document.getElementById("reportType").value;
+      // Report Type (1 se 6) ke anusar table dynamic render karne ka logic
+    }
+
+    window.onload = fetchData;
+  </script>
+</body>
+</html>
