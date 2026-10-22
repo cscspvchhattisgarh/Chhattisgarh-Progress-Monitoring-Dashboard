@@ -1,63 +1,153 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxGjFkZYlIyQTxrvDFKZMjYtKgD3-Sc7saEGiatJ83HfuNE-DTtYy6RlRLiCGp0WMyx5Q/exec";
-let rawData = [];
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chhattisgarh Progress Monitoring Dashboard</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
+    .header { background: #004085; color: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
+    label { font-weight: bold; font-size: 13px; color: #495057; display: block; margin-bottom: 5px; }
+    select, button { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; }
+    button { background-color: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    button:hover { background-color: #218838; }
+    .table-container { overflow-x: auto; margin-top: 15px; }
+    table { width: 100%; border-collapse: collapse; background: white; font-size: 13px; }
+    th, td { border: 1px solid #dee2e6; padding: 10px; text-align: center; }
+    th { background-color: #343a40; color: white; position: sticky; top: 0; }
+    tr:nth-child(even) { background-color: #f8f9fa; }
+    .loading { display: none; font-weight: bold; color: #007bff; margin-top: 10px; }
+  </style>
+</head>
+<body>
 
-async function fetchData() {
-  try {
-    let res = await fetch(API_URL);
-    rawData = await res.json();
-    populateDropdowns();
-    applyFilter();
-  } catch (err) {
-    console.error("Error fetching sheet data:", err);
-    alert("Data fetch failed! Check Google Apps Script permissions.");
-  }
-}
+  <div class="header">
+    <h2>Project Target vs Achievement Dashboard</h2>
+  </div>
 
-function populateDropdowns() {
-  if (!rawData || rawData.length < 2) return;
-  
-  let districts = new Set();
-  let verticals = new Set();
+  <div class="card">
+    <div class="filter-grid">
+      <div>
+        <label>1. Select Report Type</label>
+        <select id="reportType">
+          <option value="1">1) District wise & Quarter wise</option>
+          <option value="2">2) District wise & Half Yearly wise</option>
+          <option value="3">3) District wise & Yearly wise</option>
+          <option value="4">4) District wise & Business Activity wise</option>
+          <option value="5">5) District wise & Vertical wise</option>
+          <option value="6">6) Vertical & Business Activity wise (All Periods)</option>
+        </select>
+      </div>
 
-  // Assuming Row 0 is headers, data starts from Row 1
-  for (let i = 1; i < rawData.length; i++) {
-    if (rawData[i][0]) districts.add(rawData[i][0]); // Column A: District
-    if (rawData[i][1]) verticals.add(rawData[i][1]); // Column B: Vertical
-  }
+      <div>
+        <label>2. District</label>
+        <select id="districtFilter"><option value="ALL">All Districts</option></select>
+      </div>
 
-  const districtSelect = document.getElementById("districtFilter");
-  const verticalSelect = document.getElementById("verticalFilter");
+      <div>
+        <label>3. Vertical</label>
+        <select id="verticalFilter"><option value="ALL">All Verticals</option></select>
+      </div>
 
-  districts.forEach(d => districtSelect.innerHTML += `<option value="${d}">${d}</option>`);
-  verticals.forEach(v => verticalSelect.innerHTML += `<option value="${v}">${v}</option>`);
-}
+      <div>
+        <button onclick="generateReport()">Generate Report</button>
+      </div>
+    </div>
+    <div id="statusMsg" class="loading">Fetching Data from Google Sheet...</div>
+  </div>
 
-function applyFilter() {
-  if (!rawData || rawData.length === 0) return;
+  <div class="card">
+    <div class="table-container">
+      <table id="dashboardTable">
+        <thead id="tableHeader"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
 
-  const headers = rawData[0];
-  const rows = rawData.slice(1);
+  <script>
+    const API_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE"; 
+    let globalSheetData = [];
 
-  const selectedReport = document.getElementById("reportType").value;
-  const selectedDistrict = document.getElementById("districtFilter").value;
-  const selectedVertical = document.getElementById("verticalFilter").value;
+    async function loadData() {
+      const status = document.getElementById("statusMsg");
+      status.style.display = "block";
+      try {
+        let res = await fetch(API_URL);
+        globalSheetData = await res.json();
+        
+        if (globalSheetData.error) {
+          alert("Google Sheet Error: " + globalSheetData.error);
+          return;
+        }
 
-  // Filter rows based on District & Vertical selections
-  let filteredRows = rows.filter(row => {
-    let matchDistrict = selectedDistrict === "ALL" || row[0] === selectedDistrict;
-    let matchVertical = selectedVertical === "ALL" || row[1] === selectedVertical;
-    return matchDistrict && matchVertical;
-  });
+        populateDropdowns();
+        generateReport();
+        status.style.display = "none";
+      } catch (err) {
+        status.innerText = "Failed to load data. Please check Web App URL & permissions.";
+        console.error(err);
+      }
+    }
 
-  // Render Table Header
-  const headerRow = document.getElementById("tableHeader");
-  headerRow.innerHTML = headers.map(h => `<th>${h}</th>`).join("");
+    function populateDropdowns() {
+      if (globalSheetData.length < 2) return;
 
-  // Render Table Body
-  const body = document.getElementById("tableBody");
-  body.innerHTML = filteredRows.map(row => 
-    `<tr>${row.map(cell => `<td>${cell !== undefined ? cell : ''}</td>`).join("")}</tr>`
-  ).join("");
-}
+      let districts = new Set();
+      let verticals = new Set();
 
-window.onload = fetchData;
+      for (let i = 1; i < globalSheetData.length; i++) {
+        let row = globalSheetData[i];
+        if (row[0]) districts.add(row[0]); // Col A: District
+        if (row[1]) verticals.add(row[1]); // Col B: Vertical
+      }
+
+      let dSelect = document.getElementById("districtFilter");
+      let vSelect = document.getElementById("verticalFilter");
+
+      districts.forEach(d => dSelect.innerHTML += `<option value="${d}">${d}</option>`);
+      verticals.forEach(v => vSelect.innerHTML += `<option value="${v}">${v}</option>`);
+    }
+
+    function generateReport() {
+      if (!globalSheetData || globalSheetData.length === 0) return;
+
+      const reportType = document.getElementById("reportType").value;
+      const selectedDistrict = document.getElementById("districtFilter").value;
+      const selectedVertical = document.getElementById("verticalFilter").value;
+
+      const headers = globalSheetData[0];
+      const rows = globalSheetData.slice(1);
+
+      // Filter rows
+      let filtered = rows.filter(row => {
+        let matchD = (selectedDistrict === "ALL" || row[0] === selectedDistrict);
+        let matchV = (selectedVertical === "ALL" || row[1] === selectedVertical);
+        return matchD && matchV;
+      });
+
+      // Render Table Headers
+      let headerHTML = "<tr>";
+      headers.forEach(h => headerHTML += `<th>${h}</th>`);
+      headerHTML += "</tr>";
+      document.getElementById("tableHeader").innerHTML = headerHTML;
+
+      // Render Table Rows
+      let bodyHTML = "";
+      filtered.forEach(row => {
+        bodyHTML += "<tr>";
+        row.forEach(cell => {
+          bodyHTML += `<td>${cell !== undefined ? cell : ''}</td>`;
+        });
+        bodyHTML += "</tr>";
+      });
+
+      document.getElementById("tableBody").innerHTML = bodyHTML;
+    }
+
+    window.onload = loadData;
+  </script>
+</body>
+</html>
